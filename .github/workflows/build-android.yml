@@ -43,29 +43,21 @@ jobs:
         mkdir -p dist
         cp random-timer.html dist/index.html
         ls -la dist/
-        
-    - name: Initialize Capacitor
-      run: |
-        # 初始化Capacitor
-        npx cap init "随机提示音" "com.randomtimer.app" --web-dir="dist"
-        
-    - name: Add Android platform
-      run: |
-        # 添加Android平台
-        npx cap add android
+        echo "Web app built successfully"
         
     - name: Sync Capacitor
       run: |
-        npx cap sync android
+        # 直接同步，因为项目已经配置好
+        npx cap sync android --no-build
         
-    - name: Grant permissions
+    - name: Grant permissions and build APK
       run: |
+        # 给予gradlew执行权限
         chmod +x android/gradlew
         
-    - name: Build Android APK
-      run: |
+        # 构建APK
         cd android
-        ./gradlew assembleDebug --stacktrace
+        ./gradlew assembleDebug --stacktrace --info
         
     - name: Sign APK (Optional)
       run: |

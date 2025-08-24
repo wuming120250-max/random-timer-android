@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>随机提示音播放器</title>
+    
+    <!-- Capacitor 相关脚本 -->
+    <script type="module" src="https://unpkg.com/@capacitor/core@latest/dist/capacitor.js"></script>
+    <script type="module" src="https://unpkg.com/@capacitor/keep-awake@latest/dist/plugin.js"></script>
+    <script type="module" src="https://unpkg.com/@capacitor/background-task@latest/dist/plugin.js"></script>
+    <script type="module" src="https://unpkg.com/@capacitor/local-notifications@latest/dist/plugin.js"></script>
+    <script type="module" src="https://unpkg.com/@capacitor/haptics@latest/dist/plugin.js"></script>
+    
+    <!-- PWA 支持 -->
+    <meta name="theme-color" content="#667eea">
+    <link rel="manifest" href="./manifest.json">
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: white;
+        }
+        
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .control-group {
+            margin-bottom: 25px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+        
+        input[type="number"], input[type="file"], select {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            font-size: 16px;
+            margin-bottom: 10px;
+            box-sizing: border-box;
+        }
+        
+        .time-inputs {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+        
+        .time-inputs input {
+            flex: 1;
+            margin-bottom: 0;
+        }
+        
+        .time-inputs span {
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+        
+        button {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 18px;
+            font-weight: bold;
+            margin: 10px 5px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+        
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .status {
+            text-align: center;
+            margin: 25px 0;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            border-left: 5px solid #00d2ff;
+        }
+        
+        .status h3 {
+            margin: 0 0 10px 0;
+            color: #00d2ff;
+        }
+        
+        .countdown {
+            font-size: 2em;
+            font-weight: bold;
+            color: #ffeb3b;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        
+        .sound-list {
+            margin-top: 15px;
+        }
+        
+        .sound-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            margin: 5px 0;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .play-btn {
+            background: #4CAF50;
+            padding: 5px 15px;
+            font-size: 14px;
+            margin: 0;
+        }
+        
+        .delete-btn {
+            background: #f44336;
+            padding: 5px 15px;
+            font-size: 14px;
+            margin: 0;
+        }
+        
+        .controls {
+            text-align: center;
+            margin-top: 20px;
+        }
+        
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #4CAF50;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            opacity: 0;
+            transform: translateX(100%);
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+        
+        .notification.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+        
+        .version {
+            text-align: center;
+            margin-top: 30px;
+            opacity: 0.7;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔔 随机提示音播放器</h1>
+        
+        <div class="control-group">
+            <label for="minTime">⏰ 时间设置（分钟）</label>
+            <div class="time-inputs">
+                <input type="number" id="minTime" value="3" min="0.1" step="0.1" placeholder="最小时间">
+                <span>-</span>
+                <input type="number" id="maxTime" value="5" min="0.1" step="0.1" placeholder="最大时间">
+            </div>
+        </div>
+        
+        <div class="control-group">
+            <label for="soundFile">🎵 选择提示音文件</label>
+            <input type="file" id="soundFile" accept="audio/*" multiple>
+            <div class="sound-list" id="soundList"></div>
+        </div>
+        
+        <div class="control-group">
+            <label>🎶 内置提示音</label>
+            <select id="builtinSounds">
+                <option value="">选择内置提示音</option>
+                <option value="beep">哔哔声</option>
+                <option value="ding">叮声</option>
+                <option value="chime">钟声</option>
+                <option value="notification">通知音</option>
+            </select>
+        </div>
+        
+        <div class="controls">
+            <button id="startBtn" onclick="startTimer()">▶️ 开始计时</button>
+            <button id="stopBtn" onclick="stopTimer()" disabled>⏹️ 停止计时</button>
+            <button onclick="testSound()">🎵 测试音效</button>
+        </div>
+        
+        <div class="status">
+            <h3>⏱️ 状态信息</h3>
+            <div id="status">点击"开始计时"开始工作</div>
+            <div id="countdown" class="countdown"></div>
+        </div>
+        
+        <div class="version">
+            版本 1.0 | 支持自定义音频文件和时间间隔
+        </div>
+    </div>
+    
+    <div id="notification" class="notification"></div>
+
+    <script>
+        // Capacitor 插件初始化
+        let CapacitorCore, KeepAwake, BackgroundTask, LocalNotifications, Haptics;
+        let isNativeApp = false;
+        let backgroundTaskId = null;
+        let wakeLockActive = false;
+        
+        // 初始化 Capacitor 插件
+        async function initializeCapacitor() {
+            try {
+                if (window.Capacitor) {
+                    isNativeApp = true;
+                    CapacitorCore = window.Capacitor;
+                    
+                    // 动态导入插件
+                    if (window.CapacitorPlugins) {
+                        KeepAwake = window.CapacitorPlugins.KeepAwake;
+                        BackgroundTask = window.CapacitorPlugins.BackgroundTask;
+                        LocalNotifications = window.CapacitorPlugins.LocalNotifications;
+                        Haptics = window.CapacitorPlugins.Haptics;
+                        
+                        console.log('🟢 Capacitor 插件初始化成功');
+                        
+                        // 请求通知权限
+                        await requestNotificationPermissions();
+                        
+                        // 启用屏幕常亮
+                        await enableKeepAwake();
+                        
+                        showNotification('📱 Android 原生功能已启用');
+                    }
+                } else {
+                    console.log('🌐 运行在普通浏览器中');
+                }
+            } catch (error) {
+                console.error('❗ Capacitor 初始化失败:', error);
+            }
+        }
+        
+        // 请求通知权限
+        async function requestNotificationPermissions() {
+            if (LocalNotifications) {
+                try {
+                    await LocalNotifications.requestPermissions();
+                    console.log('🔔 通知权限获取成功');
+                } catch (error) {
+                    console.error('❗ 通知权限请求失败:', error);
+                }
+            }
+        }
+        
+        // 启用屏幕常亮
+        async function enableKeepAwake() {
+            if (KeepAwake && !wakeLockActive) {
+                try {
+                    await KeepAwake.keepAwake();
+                    wakeLockActive = true;
+                    console.log('🔆 屏幕常亮已启用');
+                } catch (error) {
+                    console.error('❗ 屏幕常亮启用失败:', error);
+                }
+            }
+        }
+        
+        // 禁用屏幕常亮
+        async function disableKeepAwake() {
+            if (KeepAwake && wakeLockActive) {
+                try {
+                    await KeepAwake.allowSleep();
+                    wakeLockActive = false;
+                    console.log('🔅 屏幕常亮已禁用');
+                } catch (error) {
+                    console.error('❗ 屏幕常亮禁用失败:', error);
+                }
+            }
+        }
+        
+        // 启动后台任务
+        async function startBackgroundTask() {
+            if (BackgroundTask && !backgroundTaskId) {
+                try {
+                    backgroundTaskId = await BackgroundTask.beforeExit(async () => {
+                        console.log('🌙 应用进入后台，继续运行计时器');
+                        // 在后台中继续运行计时器
+                        await new Promise(resolve => {
+                            setTimeout(resolve, 30000); // 后台运行 30 秒
+                        });
+                        
+                        if (backgroundTaskId) {
+                            BackgroundTask.finish({ taskId: backgroundTaskId });
+                            backgroundTaskId = null;
+                        }
+                    });
+                    console.log('🚀 后台任务已启动');
+                } catch (error) {
+                    console.error('❗ 后台任务启动失败:', error);
+                }
+            }
+        }
+        
+        // 发送本地通知
+        async function sendLocalNotification(title, body) {
+            if (LocalNotifications) {
+                try {
+                    await LocalNotifications.schedule({
+                        notifications: [
+                            {
+                                title: title,
+                                body: body,
+                                id: Date.now(),
+                                schedule: { at: new Date(Date.now() + 1000) },
+                                sound: null,
+                                attachments: null,
+                                actionTypeId: "",
+                                extra: null
+                            }
+                        ]
+                    });
+                    console.log('🔔 本地通知已发送');
+                } catch (error) {
+                    console.error('❗ 本地通知发送失败:', error);
+                }
+            }
+        }
+        
+        // 触发震动反馈
+        async function triggerHapticFeedback() {
+            if (Haptics) {
+                try {
+                    await Haptics.impact({ style: 'medium' });
+                    console.log('📳 震动反馈已触发');
+                } catch (error) {
+                    console.error('❗ 震动反馈触发失败:', error);
+                }
+            }
+        }
+        
+        let timerInterval = null;
+        let countdownInterval = null;
+        let isRunning = false;
+        let customSounds = [];
+        let currentEndTime = null;
+        
+        // 内置音效生成器
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        
+        function generateBeep(frequency = 800, duration = 200, type = 'sine') {
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.value = frequency;
+            oscillator.type = type;
+            
+            gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+            gainNode.gain.linearRampToValueAtTime(0.1, audioContext.currentTime + 0.01);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration / 1000);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + duration / 1000);
+        }
+        
+        function playBuiltinSound(type) {
+            switch(type) {
+                case 'beep':
+                    generateBeep(800, 200);
+                    break;
+                case 'ding':
+                    generateBeep(1000, 300);
+                    setTimeout(() => generateBeep(800, 200), 100);
+                    break;
+                case 'chime':
+                    generateBeep(523, 200); // C
+                    setTimeout(() => generateBeep(659, 200), 200); // E
+                    setTimeout(() => generateBeep(784, 300), 400); // G
+                    break;
+                case 'notification':
+                    generateBeep(440, 100);
+                    setTimeout(() => generateBeep(554, 100), 150);
+                    setTimeout(() => generateBeep(659, 200), 300);
+                    break;
+            }
+        }
+        
+        // 文件处理
+        document.getElementById('soundFile').addEventListener('change', function(event) {
+            const files = Array.from(event.target.files);
+            files.forEach(file => {
+                if (file.type.startsWith('audio/')) {
+                    const url = URL.createObjectURL(file);
+                    customSounds.push({
+                        name: file.name,
+                        url: url,
+                        file: file
+                    });
+                }
+            });
+            updateSoundList();
+            showNotification(`已添加 ${files.length} 个音频文件`);
+        });
+        
+        function updateSoundList() {
+            const soundList = document.getElementById('soundList');
+            soundList.innerHTML = '';
+            
+            customSounds.forEach((sound, index) => {
+                const soundItem = document.createElement('div');
+                soundItem.className = 'sound-item';
+                soundItem.innerHTML = `
+                    <span>${sound.name}</span>
+                    <div>
+                        <button class="play-btn" onclick="playCustomSound(${index})">试听</button>
+                        <button class="delete-btn" onclick="removeSound(${index})">删除</button>
+                    </div>
+                `;
+                soundList.appendChild(soundItem);
+            });
+        }
+        
+        function playCustomSound(index) {
+            if (customSounds[index]) {
+                const audio = new Audio(customSounds[index].url);
+                audio.play().catch(e => console.log('播放失败:', e));
+            }
+        }
+        
+        function removeSound(index) {
+            if (customSounds[index]) {
+                URL.revokeObjectURL(customSounds[index].url);
+                customSounds.splice(index, 1);
+                updateSoundList();
+                showNotification('音频文件已删除');
+            }
+        }
+        
+        function playSound() {
+            // Android 原生反馈
+            if (isNativeApp) {
+                triggerHapticFeedback(); // 震动反馈
+                sendLocalNotification('🔔 提示音', '随机提示音播放器提醒您！'); // 本地通知
+            }
+            
+            // 首先尝试播放自定义音频
+            if (customSounds.length > 0) {
+                const randomIndex = Math.floor(Math.random() * customSounds.length);
+                playCustomSound(randomIndex);
+                return;
+            }
+            
+            // 然后尝试播放选中的内置音效
+            const builtinSound = document.getElementById('builtinSounds').value;
+            if (builtinSound) {
+                playBuiltinSound(builtinSound);
+                return;
+            }
+            
+            // 默认播放哔哔声
+            playBuiltinSound('beep');
+        }
+        
+        function testSound() {
+            playSound();
+            showNotification('🎵 测试音效播放');
+        }
+        
+        function getRandomTime() {
+            const minTime = parseFloat(document.getElementById('minTime').value) || 3;
+            const maxTime = parseFloat(document.getElementById('maxTime').value) || 5;
+            
+            if (minTime > maxTime) {
+                showNotification('⚠️ 最小时间不能大于最大时间', 'warning');
+                return 3;
+            }
+            
+            return Math.random() * (maxTime - minTime) + minTime;
+        }
+        
+        function startTimer() {
+            if (isRunning) return;
+            
+            isRunning = true;
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('stopBtn').disabled = false;
+            
+            // 启动 Android 原生功能
+            if (isNativeApp) {
+                enableKeepAwake(); // 保持屏幕常亮
+                startBackgroundTask(); // 启动后台任务
+            }
+            
+            scheduleNext();
+            showNotification('⏰ 计时器已启动（支持后台运行）');
+        }
+        
+        function scheduleNext() {
+            if (!isRunning) return;
+            
+            const randomMinutes = getRandomTime();
+            const milliseconds = randomMinutes * 60 * 1000;
+            currentEndTime = Date.now() + milliseconds;
+            
+            updateStatus(`下次提示音将在 ${randomMinutes.toFixed(1)} 分钟后播放`);
+            startCountdown();
+            
+            timerInterval = setTimeout(() => {
+                if (isRunning) {
+                    playSound();
+                    showNotification('🔔 提示音播放！');
+                    updateStatus('播放提示音中，10秒后开始下次计时...');
+                    
+                    // 10秒后开始下次计时
+                    setTimeout(() => {
+                        if (isRunning) {
+                            scheduleNext();
+                        }
+                    }, 10000);
+                }
+            }, milliseconds);
+        }
+        
+        function startCountdown() {
+            clearInterval(countdownInterval);
+            
+            countdownInterval = setInterval(() => {
+                if (!isRunning || !currentEndTime) {
+                    clearInterval(countdownInterval);
+                    return;
+                }
+                
+                const now = Date.now();
+                const remaining = currentEndTime - now;
+                
+                if (remaining <= 0) {
+                    document.getElementById('countdown').textContent = '00:00';
+                    clearInterval(countdownInterval);
+                    return;
+                }
+                
+                const minutes = Math.floor(remaining / 60000);
+                const seconds = Math.floor((remaining % 60000) / 1000);
+                document.getElementById('countdown').textContent = 
+                    `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            }, 1000);
+        }
+        
+        function stopTimer() {
+            isRunning = false;
+            clearTimeout(timerInterval);
+            clearInterval(countdownInterval);
+            
+            // 停止 Android 原生功能
+            if (isNativeApp) {
+                disableKeepAwake(); // 允许屏幕睡眠
+                if (backgroundTaskId && BackgroundTask) {
+                    BackgroundTask.finish({ taskId: backgroundTaskId });
+                    backgroundTaskId = null;
+                }
+            }
+            
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('stopBtn').disabled = true;
+            
+            updateStatus('计时器已停止');
+            document.getElementById('countdown').textContent = '';
+            currentEndTime = null;
+            
+            showNotification('⏹️ 计时器已停止');
+        }
+        
+        function updateStatus(message) {
+            document.getElementById('status').textContent = message;
+        }
+        
+        function showNotification(message, type = 'success') {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.className = `notification ${type}`;
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+        
+        // 页面加载时初始化
+        window.addEventListener('load', async () => {
+            // 初始化 Capacitor
+            await initializeCapacitor();
+            
+            updateStatus('页面加载完成，可以开始使用');
+            
+            // 尝试初始化音频上下文（某些浏览器需要用户交互）
+            document.addEventListener('click', () => {
+                if (audioContext.state === 'suspended') {
+                    audioContext.resume();
+                }
+            }, { once: true });
+        });
+        
+        // 页面关闭时清理资源
+        window.addEventListener('beforeunload', () => {
+            stopTimer();
+            customSounds.forEach(sound => {
+                URL.revokeObjectURL(sound.url);
+            });
+        });
+        
+        // 阻止拖拽文件到页面
+        window.addEventListener('dragover', (e) => e.preventDefault());
+        window.addEventListener('drop', (e) => e.preventDefault());
+    </script>
+</body>
+</html>

@@ -1,0 +1,36 @@
+{
+  "appId": "com.randomtimer.app",
+  "appName": "随机提示音",
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "plugins": {
+    "KeepAwake": {
+      "enabled": true
+    },
+    "BackgroundTask": {
+      "enabled": true
+    },
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_icon_config_sample",
+      "iconColor": "#488AFF",
+      "sound": "beep.wav"
+    },
+    "Haptics": {
+      "enabled": true
+    }
+  },
+  "android": {
+    "allowMixedContent": true,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": true,
+    "permissions": [
+      "android.permission.WAKE_LOCK",
+      "android.permission.VIBRATE",
+      "android.permission.FOREGROUND_SERVICE",
+      "android.permission.RECEIVE_BOOT_COMPLETED",
+      "android.permission.SYSTEM_ALERT_WINDOW",
+      "android.permission.DISABLE_KEYGUARD",
+      "android.permission.TURN_SCREEN_ON"
+    ]
+  }
+}

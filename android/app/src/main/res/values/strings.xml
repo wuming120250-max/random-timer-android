@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">随机提示音</string>
+    <string name="title_activity_main">随机提示音播放器</string>
+    <string name="package_name">com.randomtimer.app</string>
+    <string name="custom_url_scheme">com.randomtimer.app</string>
+    
+    <!-- 通知相关 -->
+    <string name="notification_channel_name">提示音通知</string>
+    <string name="notification_channel_description">随机提示音播放器的通知渠道</string>
+    <string name="notification_title">🔔 提示音</string>
+    <string name="notification_body">随机提示音播放器提醒您！</string>
+    
+    <!-- 后台服务相关 -->
+    <string name="background_service_name">计时器后台服务</string>
+    <string name="background_service_description">保持计时器在后台运行</string>
+</resources>

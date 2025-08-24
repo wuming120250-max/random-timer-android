@@ -1,0 +1,54 @@
+apply plugin: 'com.android.application'
+
+android {
+    namespace "com.randomtimer.app"
+    compileSdkVersion 34
+    defaultConfig {
+        applicationId "com.randomtimer.app"
+        minSdkVersion 22
+        targetSdkVersion 34
+        versionCode 1
+        versionName "1.0.0"
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+    
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+    
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
+}
+
+repositories {
+    google()
+    mavenCentral()
+}
+
+dependencies {
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'androidx.coordinatorlayout:coordinatorlayout:1.2.0'
+    implementation 'androidx.webkit:webkit:1.8.0'
+    implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.1.0'
+    implementation 'androidx.work:work-runtime:2.9.0'
+    implementation 'androidx.core:core:1.12.0'
+    
+    // Capacitor core
+    implementation project(':capacitor-android')
+    
+    // Capacitor plugins
+    implementation 'com.capacitorjs:keep-awake:5.0.0'
+    implementation 'com.capacitorjs:background-task:5.0.0'
+    implementation 'com.capacitorjs:local-notifications:5.0.0'
+    implementation 'com.capacitorjs:haptics:5.0.0'
+    
+    testImplementation 'junit:junit:4.13.2'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
+}

@@ -1,0 +1,119 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: Setup Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'zulu'
+        java-version: '17'
+        
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+      
+    - name: Install dependencies
+      run: |
+        npm install
+        npm install -g @capacitor/cli
+        
+    - name: Build web app
+      run: |
+        # 确保dist目录存在并包含正确的文件
+        mkdir -p dist
+        cp random-timer.html dist/index.html
+        cp dist/manifest.json dist/ || echo "manifest.json not found, skipping"
+        
+    - name: Initialize Capacitor
+      run: |
+        # 初始化Capacitor（如果还未初始化）
+        if [ ! -d "node_modules/@capacitor" ]; then
+          npx cap init "随机提示音" "com.randomtimer.app" --web-dir="dist"
+        fi
+        
+    - name: Add Android platform
+      run: |
+        # 添加Android平台（如果还未添加）
+        if [ ! -d "android/app/src" ]; then
+          npx cap add android
+        fi
+        
+    - name: Sync Capacitor
+      run: |
+        npx cap sync android
+        
+    - name: Build Android APK
+      run: |
+        cd android
+        chmod +x ./gradlew
+        ./gradlew assembleDebug
+        
+    - name: Sign APK (Optional)
+      run: |
+        # 这里可以添加APK签名步骤
+        echo "APK built successfully"
+        
+    - name: Upload APK artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: android-apk
+        path: android/app/build/outputs/apk/debug/app-debug.apk
+        retention-days: 30
+        
+    - name: Create Release
+      if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: v${{ github.run_number }}
+        release_name: Release v${{ github.run_number }}
+        body: |
+          🔔 随机提示音播放器 Android 版本
+          
+          ## 新功能
+          - ✅ 支持后台运行，息屏不影响计时
+          - ✅ 本地通知提醒
+          - ✅ 震动反馈
+          - ✅ 屏幕唤醒功能
+          - ✅ 自定义音频文件支持
+          - ✅ 内置多种提示音
+          
+          ## 安装说明
+          1. 下载 APK 文件
+          2. 在 Android 设备上安装
+          3. 授予必要权限（通知、后台运行等）
+          4. 享受无干扰的定时提醒功能
+          
+          自动构建版本 #${{ github.run_number }}
+        draft: false
+        prerelease: false
+        
+    - name: Upload Release Asset
+      if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: android/app/build/outputs/apk/debug/app-debug.apk
+        asset_name: random-timer-v${{ github.run_number }}.apk
+        asset_content_type: application/vnd.android.package-archive

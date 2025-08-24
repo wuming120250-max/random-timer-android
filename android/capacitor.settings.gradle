@@ -1,0 +1,14 @@
+include ':capacitor-android'
+project(':capacitor-android').projectDir = new File('../node_modules/@capacitor/android')
+
+include ':capacitor-keep-awake'
+project(':capacitor-keep-awake').projectDir = new File('../node_modules/@capacitor/keep-awake/android')
+
+include ':capacitor-background-task'  
+project(':capacitor-background-task').projectDir = new File('../node_modules/@capacitor/background-task/android')
+
+include ':capacitor-local-notifications'
+project(':capacitor-local-notifications').projectDir = new File('../node_modules/@capacitor/local-notifications/android')
+
+include ':capacitor-haptics'
+project(':capacitor-haptics').projectDir = new File('../node_modules/@capacitor/haptics/android')

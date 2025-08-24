@@ -42,22 +42,52 @@ jobs:
         # 确保dist目录存在并包含正确的文件
         mkdir -p dist
         cp random-timer.html dist/index.html
+        # 复制manifest.json如果存在
+        if [ -f "dist/manifest.json" ]; then
+          echo "manifest.json already exists"
+        else
+          echo "manifest.json not found, but continuing..."
+        fi
         ls -la dist/
         echo "Web app built successfully"
         
     - name: Sync Capacitor
       run: |
-        # 直接同步，因为项目已经配置好
-        npx cap sync android --no-build
+        # 同步Web代码到Android项目，并生成必要的Gradle文件
+        npx cap sync android
+        
+        # 检查生成的文件
+        echo "Checking generated Android files..."
+        ls -la android/
+        
+        # 检查gradlew是否存在
+        if [ -f "android/gradlew" ]; then
+          echo "gradlew file found"
+        else
+          echo "gradlew file not found, but continuing..."
+        fi
         
     - name: Grant permissions and build APK
       run: |
-        # 给予gradlew执行权限
-        chmod +x android/gradlew
+        # 检查android目录结构
+        echo "Checking android directory structure..."
+        ls -la android/
         
-        # 构建APK
         cd android
-        ./gradlew assembleDebug --stacktrace --info
+        
+        # 检查并处理gradlew文件
+        if [ -f "gradlew" ]; then
+          echo "Using existing gradlew"
+          chmod +x gradlew
+          ./gradlew assembleDebug --stacktrace
+        elif [ -f "../node_modules/@capacitor/android/gradlew" ]; then
+          echo "Using Capacitor's gradlew"
+          chmod +x ../node_modules/@capacitor/android/gradlew
+          ../node_modules/@capacitor/android/gradlew assembleDebug --stacktrace
+        else
+          echo "Using system gradle"
+          gradle assembleDebug --stacktrace
+        fi
         
     - name: Sign APK (Optional)
       run: |

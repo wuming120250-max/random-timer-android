@@ -7,7 +7,6 @@
     
     <!-- Capacitor 相关脚本 -->
     <script type="module" src="https://unpkg.com/@capacitor/core@latest/dist/capacitor.js"></script>
-    <script type="module" src="https://unpkg.com/@capacitor/keep-awake@latest/dist/plugin.js"></script>
     <script type="module" src="https://unpkg.com/@capacitor/local-notifications@latest/dist/plugin.js"></script>
     <script type="module" src="https://unpkg.com/@capacitor/haptics@latest/dist/plugin.js"></script>
     
@@ -243,9 +242,9 @@
 
     <script>
         // Capacitor 插件初始化
-        let CapacitorCore, KeepAwake, LocalNotifications, Haptics;
+        let CapacitorCore, LocalNotifications, Haptics;
         let isNativeApp = false;
-        let wakeLockActive = false;
+        let wakeLock = null; // 使用Web API的Wake Lock
         
         // 初始化 Capacitor 插件
         async function initializeCapacitor() {
@@ -256,7 +255,6 @@
                     
                     // 动态导入插件
                     if (window.CapacitorPlugins) {
-                        KeepAwake = window.CapacitorPlugins.KeepAwake;
                         LocalNotifications = window.CapacitorPlugins.LocalNotifications;
                         Haptics = window.CapacitorPlugins.Haptics;
                         
@@ -265,8 +263,8 @@
                         // 请求通知权限
                         await requestNotificationPermissions();
                         
-                        // 启用屏幕常亮
-                        await enableKeepAwake();
+                        // 启用Web API屏幕常亮
+                        await enableWebWakeLock();
                         
                         showNotification('📱 Android 原生功能已启用');
                     }
@@ -290,29 +288,30 @@
             }
         }
         
-        // 启用屏幕常亮
-        async function enableKeepAwake() {
-            if (KeepAwake && !wakeLockActive) {
-                try {
-                    await KeepAwake.keepAwake();
-                    wakeLockActive = true;
-                    console.log('🔆 屏幕常亮已启用');
-                } catch (error) {
-                    console.error('❗ 屏幕常亮启用失败:', error);
+        // 启用Web API屏幕常亮
+        async function enableWebWakeLock() {
+            try {
+                if ('wakeLock' in navigator) {
+                    wakeLock = await navigator.wakeLock.request('screen');
+                    console.log('🔆 Web Wake Lock 已启用');
+                } else {
+                    console.log('⚠️ 该浏览器不支持 Wake Lock API');
                 }
+            } catch (error) {
+                console.error('❗ Wake Lock 启用失败:', error);
             }
         }
         
-        // 禁用屏幕常亮
-        async function disableKeepAwake() {
-            if (KeepAwake && wakeLockActive) {
-                try {
-                    await KeepAwake.allowSleep();
-                    wakeLockActive = false;
-                    console.log('🔅 屏幕常亮已禁用');
-                } catch (error) {
-                    console.error('❗ 屏幕常亮禁用失败:', error);
+        // 禁用Web API屏幕常亮
+        async function disableWebWakeLock() {
+            try {
+                if (wakeLock) {
+                    await wakeLock.release();
+                    wakeLock = null;
+                    console.log('🔅 Web Wake Lock 已禁用');
                 }
+            } catch (error) {
+                console.error('❗ Wake Lock 禁用失败:', error);
             }
         }
         
@@ -504,7 +503,7 @@
             
             // 启动 Android 原生功能
             if (isNativeApp) {
-                enableKeepAwake(); // 保持屏幕常亮
+                enableWebWakeLock(); // 保持屏幕常亮
             }
             
             scheduleNext();
@@ -569,7 +568,7 @@
             
             // 停止 Android 原生功能
             if (isNativeApp) {
-                disableKeepAwake(); // 允许屏幕睡眠
+                disableWebWakeLock(); // 允许屏幕睡眠
             }
             
             document.getElementById('startBtn').disabled = false;

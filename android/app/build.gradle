@@ -43,7 +43,6 @@ dependencies {
     implementation project(':capacitor-android')
     
     // Capacitor plugins
-    implementation 'com.capacitorjs:keep-awake:1.0.0'
     implementation 'com.capacitorjs:local-notifications:5.0.7'
     implementation 'com.capacitorjs:haptics:5.0.6'
     

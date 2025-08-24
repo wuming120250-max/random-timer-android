@@ -43,10 +43,9 @@ dependencies {
     implementation project(':capacitor-android')
     
     // Capacitor plugins
-    implementation 'com.capacitorjs:keep-awake:5.0.0'
-    implementation 'com.capacitorjs:background-task:5.0.0'
-    implementation 'com.capacitorjs:local-notifications:5.0.0'
-    implementation 'com.capacitorjs:haptics:5.0.0'
+    implementation 'com.capacitorjs:keep-awake:1.0.0'
+    implementation 'com.capacitorjs:local-notifications:5.0.7'
+    implementation 'com.capacitorjs:haptics:5.0.6'
     
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'

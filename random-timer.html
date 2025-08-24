@@ -8,7 +8,6 @@
     <!-- Capacitor 相关脚本 -->
     <script type="module" src="https://unpkg.com/@capacitor/core@latest/dist/capacitor.js"></script>
     <script type="module" src="https://unpkg.com/@capacitor/keep-awake@latest/dist/plugin.js"></script>
-    <script type="module" src="https://unpkg.com/@capacitor/background-task@latest/dist/plugin.js"></script>
     <script type="module" src="https://unpkg.com/@capacitor/local-notifications@latest/dist/plugin.js"></script>
     <script type="module" src="https://unpkg.com/@capacitor/haptics@latest/dist/plugin.js"></script>
     
@@ -244,9 +243,8 @@
 
     <script>
         // Capacitor 插件初始化
-        let CapacitorCore, KeepAwake, BackgroundTask, LocalNotifications, Haptics;
+        let CapacitorCore, KeepAwake, LocalNotifications, Haptics;
         let isNativeApp = false;
-        let backgroundTaskId = null;
         let wakeLockActive = false;
         
         // 初始化 Capacitor 插件
@@ -259,7 +257,6 @@
                     // 动态导入插件
                     if (window.CapacitorPlugins) {
                         KeepAwake = window.CapacitorPlugins.KeepAwake;
-                        BackgroundTask = window.CapacitorPlugins.BackgroundTask;
                         LocalNotifications = window.CapacitorPlugins.LocalNotifications;
                         Haptics = window.CapacitorPlugins.Haptics;
                         
@@ -315,29 +312,6 @@
                     console.log('🔅 屏幕常亮已禁用');
                 } catch (error) {
                     console.error('❗ 屏幕常亮禁用失败:', error);
-                }
-            }
-        }
-        
-        // 启动后台任务
-        async function startBackgroundTask() {
-            if (BackgroundTask && !backgroundTaskId) {
-                try {
-                    backgroundTaskId = await BackgroundTask.beforeExit(async () => {
-                        console.log('🌙 应用进入后台，继续运行计时器');
-                        // 在后台中继续运行计时器
-                        await new Promise(resolve => {
-                            setTimeout(resolve, 30000); // 后台运行 30 秒
-                        });
-                        
-                        if (backgroundTaskId) {
-                            BackgroundTask.finish({ taskId: backgroundTaskId });
-                            backgroundTaskId = null;
-                        }
-                    });
-                    console.log('🚀 后台任务已启动');
-                } catch (error) {
-                    console.error('❗ 后台任务启动失败:', error);
                 }
             }
         }
@@ -531,7 +505,6 @@
             // 启动 Android 原生功能
             if (isNativeApp) {
                 enableKeepAwake(); // 保持屏幕常亮
-                startBackgroundTask(); // 启动后台任务
             }
             
             scheduleNext();
@@ -597,10 +570,6 @@
             // 停止 Android 原生功能
             if (isNativeApp) {
                 disableKeepAwake(); // 允许屏幕睡眠
-                if (backgroundTaskId && BackgroundTask) {
-                    BackgroundTask.finish({ taskId: backgroundTaskId });
-                    backgroundTaskId = null;
-                }
             }
             
             document.getElementById('startBtn').disabled = false;

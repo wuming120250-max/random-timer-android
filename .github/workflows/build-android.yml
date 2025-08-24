@@ -19,7 +19,6 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '18'
-        cache: 'npm'
         
     - name: Setup Java
       uses: actions/setup-java@v4
@@ -30,41 +29,43 @@ jobs:
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
       
+    - name: Install Capacitor CLI
+      run: |
+        npm install -g @capacitor/cli@latest
+        
     - name: Install dependencies
       run: |
-        npm install
-        npm install -g @capacitor/cli
+        npm install --force --no-package-lock
         
     - name: Build web app
       run: |
         # 确保dist目录存在并包含正确的文件
         mkdir -p dist
         cp random-timer.html dist/index.html
-        cp dist/manifest.json dist/ || echo "manifest.json not found, skipping"
+        ls -la dist/
         
     - name: Initialize Capacitor
       run: |
-        # 初始化Capacitor（如果还未初始化）
-        if [ ! -d "node_modules/@capacitor" ]; then
-          npx cap init "随机提示音" "com.randomtimer.app" --web-dir="dist"
-        fi
+        # 初始化Capacitor
+        npx cap init "随机提示音" "com.randomtimer.app" --web-dir="dist"
         
     - name: Add Android platform
       run: |
-        # 添加Android平台（如果还未添加）
-        if [ ! -d "android/app/src" ]; then
-          npx cap add android
-        fi
+        # 添加Android平台
+        npx cap add android
         
     - name: Sync Capacitor
       run: |
         npx cap sync android
         
+    - name: Grant permissions
+      run: |
+        chmod +x android/gradlew
+        
     - name: Build Android APK
       run: |
         cd android
-        chmod +x ./gradlew
-        ./gradlew assembleDebug
+        ./gradlew assembleDebug --stacktrace
         
     - name: Sign APK (Optional)
       run: |
@@ -80,6 +81,7 @@ jobs:
         
     - name: Create Release
       if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+      id: create_release
       uses: actions/create-release@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
